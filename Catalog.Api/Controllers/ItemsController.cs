@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Catalog.Api.Dtos;
 using Catalog.Api.Entities;
 using Catalog.Api.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using static Catalog.Api.Dtos;
 
 namespace Catalog.Api.Controllers
 {
@@ -24,10 +24,15 @@ namespace Catalog.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IEnumerable<ItemDto>> GetItemsAsync()
+        public async Task<IEnumerable<ItemDto>> GetItemsAsync(string name = null)
         {
             var items = (await _repository.GetItemsAsync())
                         .Select(item => item.AsDto());
+            
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                items = items.Where(item => item.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+            }
 
             _logger.LogInformation($"{DateTime.UtcNow.ToString("hh:mm:ss")}: Retrieved {items.Count()} items");
 
@@ -52,6 +57,7 @@ namespace Catalog.Api.Controllers
             {
                 Id = Guid.NewGuid(),
                 Name = itemDto.Name,
+                Description = itemDto.Description,
                 Price = itemDto.Price,
                 CreatedDate = DateTimeOffset.UtcNow
             };
@@ -69,13 +75,10 @@ namespace Catalog.Api.Controllers
             if(existingItem is null)
                 return NotFound();
 
-            Item updatedItem = existingItem with
-            {
-                Name = itemDto.Name,
-                Price = itemDto.Price
-            };
+            existingItem.Name = itemDto.Name;
+            existingItem.Price = itemDto.Price;
 
-            await _repository.UpdateItemAsync(updatedItem);
+            await _repository.UpdateItemAsync(existingItem);
             return NoContent();
         }
 

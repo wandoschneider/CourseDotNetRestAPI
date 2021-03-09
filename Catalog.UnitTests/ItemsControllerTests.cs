@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Catalog.Api.Controllers;
-using Catalog.Api.Dtos;
 using Catalog.Api.Entities;
 using Catalog.Api.Repositories;
 using FluentAssertions;
@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using static Catalog.Api.Dtos;
 
 namespace Catalog.UnitTests
 {
@@ -46,9 +47,8 @@ namespace Catalog.UnitTests
 
             var result = await controller.GetItemAsync(Guid.NewGuid());
 
-            result.Value.Should().BeEquivalentTo(
-                expectedItem,
-                options => options.ComparingByMembers<Item>()); 
+            result.Value.Should().BeEquivalentTo(expectedItem);
+            // options => options.ComparingByMembers<Item>()); 
             // Essa opção é necessária pois nossa classe item é um record
         }
 
@@ -67,19 +67,38 @@ namespace Catalog.UnitTests
 
             var actualItems = await controller.GetItemsAsync();
 
-            actualItems.Should().BeEquivalentTo(
-                expectedItems,
-                options => options.ComparingByMembers<Item>());
+            actualItems.Should().BeEquivalentTo(expectedItems);
+        }
+
+        [Fact]
+        public async Task GetItemsAsync_WithMatchingItems_ReturnsMatchingItems()
+        {
+            var allItems = new[]{
+                new Item(){Name = "Potion"},
+                new Item(){Name = "Antidote"},
+                new Item(){Name = "Hi-Potion"}
+            };
+
+            var nameToMatch = "Potion";
+
+            repositoryStub.Setup(repo => repo.GetItemsAsync()).ReturnsAsync(allItems);
+
+            var controller = new ItemsController(repositoryStub.Object, loggerStub.Object);
+
+            IEnumerable<ItemDto> foundItens = await controller.GetItemsAsync(nameToMatch);
+
+            foundItens.Should().OnlyContain(
+                item => item.Name == allItems[0].Name || item.Name == allItems[2].Name
+            );
         }
 
         [Fact]
         public async Task CreateItemsAsync_WitItemToCreate_ReturnsCreatedItem()
         {
-            var itemToCreate = new CreateItemDto()
-            {
-                Name = Guid.NewGuid().ToString(),
-                Price = rand.Next(1000),
-            };
+            var itemToCreate = new CreateItemDto(
+                Guid.NewGuid().ToString(),
+                Guid.NewGuid().ToString(),
+                rand.Next(1000));
 
             var controller = new ItemsController(repositoryStub.Object, loggerStub.Object);
 
@@ -116,11 +135,10 @@ namespace Catalog.UnitTests
                 .ReturnsAsync(existingItem);
 
             var itemId = existingItem.Id;
-            var itemToUpdate = new UpdateItemDto()
-            {
-                Name = Guid.NewGuid().ToString(),
-                Price = existingItem.Price + 3
-            };
+            var itemToUpdate = new UpdateItemDto(
+                Guid.NewGuid().ToString(),
+                Guid.NewGuid().ToString(),
+                existingItem.Price + 3);
 
             var controller = new ItemsController(repositoryStub.Object, loggerStub.Object);
 
