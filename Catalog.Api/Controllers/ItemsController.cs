@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Catalog.Dtos;
-using Catalog.Entities;
-using Catalog.Repositories;
+using Catalog.Api.Dtos;
+using Catalog.Api.Entities;
+using Catalog.Api.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace Catalog.Controllers
+namespace Catalog.Api.Controllers
 {
     [ApiController]
     [Route("[controller]")]
@@ -42,7 +42,7 @@ namespace Catalog.Controllers
             if (item is null)
                 return NotFound();
 
-            return Ok(item.AsDto());
+            return item.AsDto();
         }
 
         [HttpPost]
